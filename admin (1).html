@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Control de Personal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- QRCode.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --card: #1e2230;
+    --border: #2a2f42;
+    --accent: #e8c547;
+    --text: #e8eaf0;
+    --muted: #7a8099;
+    --lomas: #f0c040;
+    --quilmes: #3dd6c8;
+    --laplata: #b094f8;
+    --success: #4ade80;
+    --danger: #fb7185;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 50% 40% at 15% 15%, rgba(240,192,64,.05) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 35% at 85% 85%, rgba(61,214,200,.05) 0%, transparent 60%);
+    pointer-events:none; z-index:0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(13,15,20,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  }
+
+  .logo { display:flex; align-items:center; gap:.8rem; }
+  .logo-icon { width:38px;height:38px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0; }
+  .logo h1 { font-family:'DM Serif Display',serif; font-size:1.2rem; }
+  .logo span { font-size:.7rem;color:var(--muted);display:block;text-transform:uppercase;letter-spacing:.06em; }
+
+  .header-actions { display:flex;gap:.75rem;align-items:center;flex-wrap:wrap; }
+
+  .date-chip { font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);background:var(--surface);padding:.35rem .85rem;border-radius:20px;border:1px solid var(--border); }
+
+  .btn { border:none;border-radius:9px;padding:.55rem 1.1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .2s; }
+  .btn-primary { background:var(--accent);color:#0d0f14; }
+  .btn-primary:hover { background:#f5d45e;transform:translateY(-1px); }
+  .btn-ghost { background:var(--surface);color:var(--text);border:1px solid var(--border); }
+  .btn-ghost:hover { border-color:var(--accent);color:var(--accent); }
+
+  /* ── Tabs ── */
+  .tabs { position:relative;z-index:1;display:flex;gap:.5rem;padding:1.5rem 2rem .5rem;flex-wrap:wrap; }
+  .tab { background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem 1.1rem;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;color:var(--muted); }
+  .tab.active { background:var(--accent);color:#0d0f14;border-color:var(--accent); }
+  .tab:not(.active):hover { border-color:var(--accent);color:var(--accent); }
+
+  /* ── Container ── */
+  .container { position:relative;z-index:1;padding:1rem 2rem 4rem;max-width:1400px;margin:0 auto; }
+
+  /* ── Tab panels ── */
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* ── Summary ── */
+  .summary-row { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.8rem; }
+  .sum-card { background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1.1rem 1.3rem;position:relative;overflow:hidden;transition:transform .2s; }
+  .sum-card:hover { transform:translateY(-2px); }
+  .sum-card::before { content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:13px 13px 0 0; }
+  .sum-card.lomas::before { background:var(--lomas); }
+  .sum-card.quilmes::before { background:var(--quilmes); }
+  .sum-card.laplata::before { background:var(--laplata); }
+  .sum-card.total::before { background:linear-gradient(90deg,var(--lomas),var(--quilmes),var(--laplata)); }
+  .sum-label { font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem;font-weight:600; }
+  .sum-num { font-family:'DM Serif Display',serif;font-size:2rem;line-height:1; }
+  .sum-card.lomas .sum-num { color:var(--lomas); }
+  .sum-card.quilmes .sum-num { color:var(--quilmes); }
+  .sum-card.laplata .sum-num { color:var(--laplata); }
+  .sum-sub { font-size:.72rem;color:var(--muted);margin-top:.2rem; }
+
+  /* ── Staff grid ── */
+  .branch-section { margin-bottom:2rem; }
+  .branch-title { display:flex;align-items:center;gap:.75rem;margin-bottom:1rem; }
+  .branch-title h2 { font-family:'DM Serif Display',serif;font-size:1.15rem; }
+  .branch-dot { width:10px;height:10px;border-radius:50%; }
+  .branch-title-line { flex:1;height:1px;background:var(--border); }
+
+  .staff-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.85rem; }
+
+  .staff-tile { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.2rem;transition:all .2s;position:relative;overflow:hidden; }
+  .staff-tile:hover { transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.25); }
+  .staff-tile.present { border-color:rgba(74,222,128,.3); }
+  .staff-tile.done { border-color:rgba(90,97,128,.3);opacity:.7; }
+
+  .tile-top { display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem; }
+  .tile-avatar { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0;color:#0d0f14;position:relative; }
+  .tile-avatar .dot { position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:var(--success);border:2px solid var(--surface); }
+  .tile-name { font-weight:600;font-size:.92rem; }
+  .tile-role { font-size:.7rem;color:var(--muted); }
+
+  .tile-times { display:flex;gap:.5rem; }
+  .time-badge { flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.45rem .6rem;text-align:center; }
+  .time-badge-label { font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.2rem;font-weight:600; }
+  .time-badge-val { font-family:'DM Mono',monospace;font-size:.82rem; }
+  .time-badge.in .time-badge-val { color:var(--success); }
+  .time-badge.out .time-badge-val { color:var(--danger); }
+
+  /* ── QR Section ── */
+  .qr-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem; }
+
+  .qr-card { background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.8rem;text-align:center;transition:all .2s; }
+  .qr-card:hover { transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.3); }
+
+  .qr-card-title { font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:.3rem; }
+  .qr-card-sub { font-size:.78rem;color:var(--muted);margin-bottom:1.5rem; }
+
+  .qr-box { background:#fff;border-radius:14px;padding:16px;display:inline-block;margin:0 auto 1.2rem; }
+
+  .qr-url { font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);word-break:break-all;margin-bottom:1.2rem;padding:.5rem .75rem;background:var(--card);border-radius:8px;border:1px solid var(--border);text-align:left; }
+
+  .qr-actions { display:flex;gap:.6rem;justify-content:center; }
+
+  .qr-instr { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-top:1.5rem; }
+  .qr-instr h3 { font-size:.9rem;font-weight:700;margin-bottom:1rem;color:var(--accent); }
+  .qr-steps { display:flex;flex-direction:column;gap:.75rem; }
+  .qr-step { display:flex;align-items:flex-start;gap:.75rem; }
+  .step-num { width:24px;height:24px;border-radius:50%;background:var(--accent);color:#0d0f14;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem; }
+  .step-text { font-size:.82rem;color:var(--muted);line-height:1.5; }
+  .step-text strong { color:var(--text); }
+
+  /* ── Log ── */
+  .log-controls { display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center; }
+  .filter-input { background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem .9rem;color:var(--text);font-family:'DM Mono',monospace;font-size:.8rem;outline:none;transition:border-color .2s; }
+  .filter-input:focus { border-color:var(--accent); }
+  .filter-select { background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.5rem .9rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;cursor:pointer;appearance:none; }
+
+  .table-wrap { background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden; }
+  .log-table { width:100%;border-collapse:collapse;font-size:.82rem; }
+  .log-table th { padding:.8rem 1.1rem;text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--card);border-bottom:1px solid var(--border); }
+  .log-table td { padding:.75rem 1.1rem;border-bottom:1px solid rgba(42,47,66,.45); }
+  .log-table tr:last-child td { border-bottom:none; }
+  .log-table tr:hover td { background:var(--card); }
+
+  .tag { display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:20px;font-size:.7rem;font-weight:600; }
+  .tag-lomas { background:rgba(240,192,64,.12);color:var(--lomas); }
+  .tag-quilmes { background:rgba(61,214,200,.12);color:var(--quilmes); }
+  .tag-laplata { background:rgba(176,148,248,.12);color:var(--laplata); }
+  .tag-ingreso { background:rgba(74,222,128,.12);color:var(--success); }
+  .tag-egreso  { background:rgba(251,113,133,.12);color:var(--danger); }
+
+  .mono { font-family:'DM Mono',monospace; }
+  .muted { color:var(--muted); }
+
+  .empty-state { text-align:center;padding:3rem;color:var(--muted); }
+  .empty-state .icon { font-size:2.5rem;margin-bottom:.75rem; }
+
+  /* ── Modal ── */
+  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:2rem;width:90%;max-width:460px;position:relative;animation:slideUp .25s ease; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .modal-title { font-family:'DM Serif Display',serif;font-size:1.3rem;margin-bottom:1.5rem; }
+  .modal-close { position:absolute;top:1.1rem;right:1.1rem;background:var(--card);border:1px solid var(--border);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:.9rem;transition:all .2s; }
+  .modal-close:hover { color:var(--text); }
+  .form-group { margin-bottom:1.1rem; }
+  .form-label { display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.45rem;font-weight:600; }
+  .form-select,.form-input { width:100%;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.65rem .9rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s;appearance:none; }
+  .form-select:focus,.form-input:focus { border-color:var(--accent); }
+  .form-row { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+  .btn-submit { width:100%;background:var(--accent);color:#0d0f14;border:none;border-radius:9px;padding:.8rem;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.92rem;cursor:pointer;margin-top:.5rem;transition:all .2s; }
+  .btn-submit:hover { background:#f5d45e;transform:translateY(-1px); }
+
+  /* Toast */
+  .toast { position:fixed;bottom:1.5rem;right:1.5rem;background:var(--card);border:1px solid var(--success);color:var(--success);border-radius:12px;padding:.8rem 1.3rem;font-size:.83rem;font-weight:600;z-index:200;display:none;align-items:center;gap:.5rem;box-shadow:0 8px 24px rgba(0,0,0,.3); }
+  .toast.show { display:flex;animation:fadeInUp .2s ease; }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Print QR */
+  @media print {
+    body * { visibility:hidden; }
+    .print-area, .print-area * { visibility:visible; }
+    .print-area { position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:2rem;padding:2rem;align-items:flex-start; }
+  }
+
+  @media (max-width:640px) {
+    .container,.tabs { padding-left:1rem;padding-right:1rem; }
+    header { padding:1rem; }
+    .form-row { grid-template-columns:1fr; }
+  }
+
+  select option { background:#1e2230; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏢</div>
+    <div>
+      <h1>Panel de Administración</h1>
+      <span>Control de Personal por Sucursal</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="date-chip" id="dateChip"></div>
+    <button class="btn btn-ghost" onclick="openModal()">＋ Registro Manual</button>
+    <button class="btn btn-primary" onclick="exportCSV()">⬇ Exportar CSV</button>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('estado')">📊 Estado Hoy</button>
+  <button class="tab" onclick="switchTab('qr')">📲 Códigos QR</button>
+  <button class="tab" onclick="switchTab('historial')">📋 Historial</button>
+</div>
+
+<div class="container">
+
+  <!-- ══ TAB: Estado ══ -->
+  <div class="panel active" id="panel-estado">
+
+    <div class="summary-row">
+      <div class="sum-card lomas">
+        <div class="sum-label">Lomas de Zamora</div>
+        <div class="sum-num" id="cnt-lomas">0</div>
+        <div class="sum-sub">ingresos hoy</div>
+      </div>
+      <div class="sum-card quilmes">
+        <div class="sum-label">Quilmes</div>
+        <div class="sum-num" id="cnt-quilmes">0</div>
+        <div class="sum-sub">ingresos hoy</div>
+      </div>
+      <div class="sum-card laplata">
+        <div class="sum-label">La Plata</div>
+        <div class="sum-num" id="cnt-laplata">0</div>
+        <div class="sum-sub">ingresos hoy</div>
+      </div>
+      <div class="sum-card total">
+        <div class="sum-label">Total</div>
+        <div class="sum-num" id="cnt-total">0</div>
+        <div class="sum-sub">ingresos hoy</div>
+      </div>
+    </div>
+
+    <div id="staffSections"></div>
+  </div>
+
+  <!-- ══ TAB: QR ══ -->
+  <div class="panel" id="panel-qr">
+
+    <div class="qr-instr" style="margin-bottom:1.5rem">
+      <h3>¿Cómo funciona el sistema de fichaje con QR?</h3>
+      <div class="qr-steps">
+        <div class="qr-step"><div class="step-num">1</div><div class="step-text"><strong>Guardá o imprimí</strong> el QR de cada sucursal y pegalo en la entrada.</div></div>
+        <div class="qr-step"><div class="step-num">2</div><div class="step-text">El empleado <strong>escanea el QR con el celular</strong> al llegar o al irse.</div></div>
+        <div class="qr-step"><div class="step-num">3</div><div class="step-text"><strong>Elige su nombre</strong> en la pantalla y confirma si es ingreso o egreso.</div></div>
+        <div class="qr-step"><div class="step-num">4</div><div class="step-text">El registro queda guardado y lo ves acá en <strong>tiempo real</strong>.</div></div>
+      </div>
+    </div>
+
+    <div class="qr-grid" id="qrGrid"></div>
+    <div class="print-area" id="printArea" style="display:none"></div>
+  </div>
+
+  <!-- ══ TAB: Historial ══ -->
+  <div class="panel" id="panel-historial">
+    <div class="log-controls">
+      <input type="date" class="filter-input" id="filterDate" onchange="renderLog()">
+      <select class="filter-select" id="filterBranch" onchange="renderLog()">
+        <option value="">Todas las sucursales</option>
+        <option value="lomas">Lomas de Zamora</option>
+        <option value="quilmes">Quilmes</option>
+        <option value="laplata">La Plata</option>
+      </select>
+      <select class="filter-select" id="filterType" onchange="renderLog()">
+        <option value="">Ingreso y egreso</option>
+        <option value="ingreso">Solo ingresos</option>
+        <option value="egreso">Solo egresos</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Personal</th><th>Sucursal</th><th>Tipo</th>
+            <th>Hora</th><th>Fecha</th><th>Nota</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal registro manual -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleModalClick(event)">
+  <div class="modal">
+    <div class="modal-title">📝 Registro Manual</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="form-group">
+      <label class="form-label">Sucursal</label>
+      <select class="form-select" id="mSucursal" onchange="fillPersonOptions()">
+        <option value="">— Seleccionar —</option>
+        <option value="lomas">Lomas de Zamora</option>
+        <option value="quilmes">Quilmes</option>
+        <option value="laplata">La Plata</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Personal</label>
+      <select class="form-select" id="mPersonal">
+        <option value="">— Primero elegí la sucursal —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" id="mTipo">
+        <option value="ingreso">Ingreso</option>
+        <option value="egreso">Egreso</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fecha</label>
+        <input type="date" class="form-input" id="mFecha">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hora</label>
+        <input type="time" class="form-input" id="mHora">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nota (opcional)</label>
+      <input type="text" class="form-input" id="mNota" placeholder="Observación...">
+    </div>
+    <button class="btn-submit" onclick="submitManual()">✔ Guardar Registro</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<script>
+// ── Constants ──────────────────────────────────────
+const STAFF = {
+  lomas:   [{name:'Abel',role:'Encargado',init:'AB'},{name:'Alan',role:'Ventas',init:'AL'},{name:'Marcos',role:'Ventas',init:'MA'}],
+  quilmes: [{name:'Tomás',role:'Encargado',init:'TO'},{name:'Fran',role:'Ventas',init:'FR'}],
+  laplata: [{name:'Marina',role:'Encargada',init:'MR'},{name:'Milagros',role:'Ventas',init:'MI'},{name:'Julián',role:'Ventas',init:'JU'}],
+};
+
+const BRANCH_NAMES  = {lomas:'Lomas de Zamora', quilmes:'Quilmes', laplata:'La Plata'};
+const BRANCH_COLORS = {lomas:'#f0c040', quilmes:'#3dd6c8', laplata:'#b094f8'};
+const BRANCH_EMOJIS = {lomas:'🏙', quilmes:'🌊', laplata:'🏛'};
+
+// ── Storage ────────────────────────────────────────
+function getRecords() { return JSON.parse(localStorage.getItem('personalRecords')||'[]'); }
+function saveRecords(r){ localStorage.setItem('personalRecords', JSON.stringify(r)); }
+function todayStr()    { return new Date().toISOString().slice(0,10); }
+function nowTime()     { return new Date().toTimeString().slice(0,5); }
+
+function getPersonToday(name) {
+  return getRecords().filter(r => r.person===name && r.date===todayStr());
+}
+
+// ── Tabs ───────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['estado','qr','historial'];
+    t.classList.toggle('active', ids[i]===id);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${id}`).classList.add('active');
+  if (id==='qr')        renderQR();
+  if (id==='historial') renderLog();
+  if (id==='estado')    renderState();
+}
+
+// ── Init ───────────────────────────────────────────
+function init() {
+  const now = new Date();
+  document.getElementById('dateChip').textContent =
+    now.toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('filterDate').value = todayStr();
+  document.getElementById('mFecha').value = todayStr();
+  document.getElementById('mHora').value = nowTime();
+  renderState();
+  // auto-refresh every 30s
+  setInterval(renderState, 30000);
+}
+
+// ── State panel ────────────────────────────────────
+function renderState() {
+  const today = todayStr();
+  const recs = getRecords().filter(r => r.date===today);
+
+  ['lomas','quilmes','laplata'].forEach(b => {
+    const n = [...new Set(recs.filter(r=>r.branch===b && r.type==='ingreso').map(r=>r.person))].length;
+    document.getElementById(`cnt-${b}`).textContent = n;
+  });
+  const total = [...new Set(recs.filter(r=>r.type==='ingreso').map(r=>r.person))].length;
+  document.getElementById('cnt-total').textContent = total;
+
+  const container = document.getElementById('staffSections');
+  container.innerHTML = '';
+
+  Object.entries(STAFF).forEach(([branch, people]) => {
+    const color = BRANCH_COLORS[branch];
+    const sec = document.createElement('div');
+    sec.className = 'branch-section';
+    sec.innerHTML = `
+      <div class="branch-title">
+        <div class="branch-dot" style="background:${color}"></div>
+        <h2>${BRANCH_NAMES[branch]}</h2>
+        <div class="branch-title-line"></div>
+      </div>
+      <div class="staff-grid" id="sg-${branch}"></div>
+    `;
+    container.appendChild(sec);
+
+    const grid = sec.querySelector(`#sg-${branch}`);
+    people.forEach(person => {
+      const pRecs = recs.filter(r=>r.person===person.name);
+      const ingRec = pRecs.find(r=>r.type==='ingreso');
+      const egrRec = pRecs.find(r=>r.type==='egreso');
+      const isPresent = ingRec && !egrRec;
+      const isDone = ingRec && egrRec;
+
+      const tile = document.createElement('div');
+      tile.className = `staff-tile ${isPresent?'present':''} ${isDone?'done':''}`;
+      tile.innerHTML = `
+        <div class="tile-top">
+          <div class="tile-avatar" style="background:${color}">
+            ${person.init}
+            ${isPresent ? '<div class="dot"></div>' : ''}
+          </div>
+          <div>
+            <div class="tile-name">${person.name}</div>
+            <div class="tile-role">${person.role}</div>
+          </div>
+        </div>
+        <div class="tile-times">
+          <div class="time-badge in">
+            <div class="time-badge-label">Ingreso</div>
+            <div class="time-badge-val">${ingRec ? ingRec.time : '—'}</div>
+          </div>
+          <div class="time-badge out">
+            <div class="time-badge-label">Egreso</div>
+            <div class="time-badge-val">${egrRec ? egrRec.time : '—'}</div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(tile);
+    });
+  });
+}
+
+// ── QR panel ───────────────────────────────────────
+function renderQR() {
+  const grid = document.getElementById('qrGrid');
+  if (grid.dataset.rendered) return; // only render once
+
+  grid.innerHTML = '';
+
+  // Detect base URL — use current page folder + fichar.html
+  const baseUrl = location.href.replace(/\/[^\/]*$/, '') + '/fichar.html';
+
+  Object.keys(STAFF).forEach(branch => {
+    const url = `${baseUrl}?sucursal=${branch}`;
+    const color = BRANCH_COLORS[branch];
+
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    card.innerHTML = `
+      <div class="qr-card-title">${BRANCH_EMOJIS[branch]} ${BRANCH_NAMES[branch]}</div>
+      <div class="qr-card-sub">Escaneá para fichar ingreso / egreso</div>
+      <div class="qr-box" id="qr-${branch}"></div>
+      <div class="qr-url">${url}</div>
+      <div class="qr-actions">
+        <button class="btn btn-ghost" onclick="printQR('${branch}')">🖨 Imprimir</button>
+        <button class="btn btn-primary" onclick="copyUrl('${url}')">📋 Copiar link</button>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // Generate QR
+    setTimeout(() => {
+      new QRCode(document.getElementById(`qr-${branch}`), {
+        text: url,
+        width: 180,
+        height: 180,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }, 50);
+  });
+
+  grid.dataset.rendered = '1';
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => toast('✅ Link copiado al portapapeles'));
+}
+
+function printQR(branch) {
+  const qrEl = document.getElementById(`qr-${branch}`);
+  const img = qrEl.querySelector('img') || qrEl.querySelector('canvas');
+  let src = '';
+  if (img && img.tagName==='IMG') src = img.src;
+  else if (img && img.tagName==='CANVAS') src = img.toDataURL();
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><title>QR ${BRANCH_NAMES[branch]}</title>
+    <style>
+      body { font-family: sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:2rem; background:#fff; }
+      img { width:260px; height:260px; margin-bottom:1.5rem; }
+      h1 { font-size:1.8rem; margin-bottom:.5rem; }
+      p { color:#666; font-size:.9rem; }
+    </style>
+    </head><body>
+      <img src="${src}">
+      <h1>${BRANCH_EMOJIS[branch]} ${BRANCH_NAMES[branch]}</h1>
+      <p>Escaneá este código para fichar tu ingreso o egreso</p>
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}
+
+// ── Log panel ──────────────────────────────────────
+function renderLog() {
+  const dateF   = document.getElementById('filterDate').value;
+  const branchF = document.getElementById('filterBranch').value;
+  const typeF   = document.getElementById('filterType').value;
+
+  let recs = getRecords()
+    .filter(r => (!dateF   || r.date===dateF))
+    .filter(r => (!branchF || r.branch===branchF))
+    .filter(r => (!typeF   || r.type===typeF))
+    .sort((a,b) => a.date!==b.date ? b.date.localeCompare(a.date) : b.time.localeCompare(a.time));
+
+  const tbody = document.getElementById('logBody');
+  if (!recs.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div>No hay registros.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = recs.map(r => `
+    <tr>
+      <td><strong>${r.person}</strong></td>
+      <td><span class="tag tag-${r.branch}">${BRANCH_NAMES[r.branch]}</span></td>
+      <td><span class="tag tag-${r.type}">${r.type==='ingreso'?'▶ Ingreso':'◼ Egreso'}</span></td>
+      <td class="mono">${r.time} hs</td>
+      <td class="mono">${fmtDate(r.date)}</td>
+      <td class="muted" style="font-size:.78rem">${r.note||'—'}</td>
+      <td><button onclick="deleteRec(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:.2rem .4rem;border-radius:6px;transition:color .2s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">🗑</button></td>
+    </tr>
+  `).join('');
+}
+
+function fmtDate(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+
+function deleteRec(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  saveRecords(getRecords().filter(r=>r.id!==id));
+  renderLog(); renderState();
+  toast('🗑 Registro eliminado');
+}
+
+// ── Export CSV ─────────────────────────────────────
+function exportCSV() {
+  const recs = getRecords().sort((a,b)=>a.date!==b.date?b.date.localeCompare(a.date):b.time.localeCompare(a.time));
+  if (!recs.length) { toast('No hay registros para exportar'); return; }
+  const header = 'Nombre,Sucursal,Rol,Tipo,Hora,Fecha,Nota\n';
+  const rows = recs.map(r =>
+    `${r.person},"${BRANCH_NAMES[r.branch]}",${r.role},${r.type},${r.time},${fmtDate(r.date)},"${r.note||''}"`
+  ).join('\n');
+  const blob = new Blob(['\uFEFF'+header+rows], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `personal_${todayStr()}.csv`;
+  a.click();
+  toast('✅ CSV exportado');
+}
+
+// ── Modal ──────────────────────────────────────────
+function openModal() {
+  document.getElementById('mSucursal').value='';
+  document.getElementById('mPersonal').innerHTML='<option>— Primero elegí la sucursal —</option>';
+  document.getElementById('mFecha').value=todayStr();
+  document.getElementById('mHora').value=nowTime();
+  document.getElementById('mNota').value='';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function handleModalClick(e) { if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+function fillPersonOptions() {
+  const branch = document.getElementById('mSucursal').value;
+  const sel = document.getElementById('mPersonal');
+  if (!branch) { sel.innerHTML='<option>— Primero elegí la sucursal —</option>'; return; }
+  sel.innerHTML = STAFF[branch].map(s=>`<option value="${s.name}|${s.role}">${s.name} (${s.role})</option>`).join('');
+}
+
+function submitManual() {
+  const branch = document.getElementById('mSucursal').value;
+  const pv     = document.getElementById('mPersonal').value;
+  const tipo   = document.getElementById('mTipo').value;
+  const fecha  = document.getElementById('mFecha').value;
+  const hora   = document.getElementById('mHora').value;
+  const nota   = document.getElementById('mNota').value;
+  if (!branch||!pv||!fecha||!hora) { alert('Completá todos los campos requeridos.'); return; }
+  const [name,role] = pv.split('|');
+  const rec = { id:Date.now(), branch, person:name, role, date:fecha, time:hora, type:tipo, note:nota };
+  const recs = getRecords(); recs.push(rec); saveRecords(recs);
+  closeModal();
+  renderState(); renderLog();
+  toast(`✅ Registrado: ${name} — ${tipo}`);
+}
+
+// ── Toast ──────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>
